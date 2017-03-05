@@ -4,25 +4,39 @@
 
 from SPARQLWrapper import SPARQLWrapper, JSON
 import nltk
+import forecastio
+from geopy.geocoders import Nominatim
+
+api_key = "185fca8c5f6c18ee5e8dfe5a04b771be"
 
 print '\n', "Hi, I'm TonAI. What would you like to know about? "
 
 inp = raw_input()
-inp_string = inp
 
-# Use for quick test - when you don't want to use other inputs
-# response = inp.replace(" ", "_")
-# print '\n', "Enter a prefix (rdfs, dbo)"
-# prefix_input = raw_input()
-# prefix = prefix_input
-# print '\n', "Enter a property input (comment, birthYear)"
-# property_input = raw_input()
-# label = property_input
 
 inp_tokens = nltk.word_tokenize(inp)
 tagger = nltk.pos_tag
 tagged_input = tagger(inp_tokens)
-print tagged_input
+# print tagged_input
+
+
+def location():
+    geolocator = Nominatim()
+    for i in tagged_input:
+        if 'NNP' in i:
+            location = geolocator.geocode(i[0])
+    lat = location.latitude
+    lon = location.longitude
+    return lat, lon
+
+if 'weather' in inp_tokens:
+    newlat = location()[0]
+    newlon = location()[1]
+
+    forecast = forecastio.load_forecast(api_key, newlat, newlon)
+    byHour = forecast.currently()
+    print '\n', byHour.summary, "with a temperature of", byHour.temperature, "C", '\n'
+
 
 # Tags to be used to identify keywords for response
 # Change as you go along, testing different URLs
@@ -52,11 +66,11 @@ if "?" not in inp:
     prefix = "rdfs"
 
 
-print "response:", response
-print "temp: ", temp
-
-
-print '\n', "http://dbpedia.org/resource/"+response+">"+prefix+":"+label+"?"+label
+# print "response:", response
+# print "temp: ", temp
+#
+#
+# print '\n', "http://dbpedia.org/resource/"+response+">"+prefix+":"+label+"?"+label
 
 
 # SPARQL connection to DBPedia
@@ -87,5 +101,5 @@ def info_retrieval():
     for result in results["results"]["bindings"]:
         print '\n' + (result[label]["value"])
 
-
-info_retrieval()
+if 'weather' not in tagged_input:
+    info_retrieval()
